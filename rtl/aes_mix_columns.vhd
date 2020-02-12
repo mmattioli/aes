@@ -27,6 +27,10 @@ architecture structural of aes_mix_columns is
     signal matrix_final : matrix;
     signal matrix_multiply_2 : matrix;
     signal matrix_multiply_3 : matrix;
+    signal matrix_multiply_9 : matrix;
+    signal matrix_multiply_b : matrix;
+    signal matrix_multiply_d : matrix;
+    signal matrix_multiply_e : matrix;
     
     -- Signals used to hold intermediary "results" while performing the operations. 
     signal intermediary_multiply_2 : intermediary_matrix;
@@ -45,33 +49,72 @@ end process map_to_matrix;
 
 -- The Galois field specifies multiplying by either 1, 2, or 3. Since multiplying anything by 1 yields itself, there isn't much to do.
 -- The easiest path is to simply multiply all values by 2 and by 3 and then "pick" the resulting values as needed per the Galois field.
+-- According to the specification, if the 8th bit is high then xor with x"1b".
 
--- Multiply by 2.
-multiply_by_2 : process(matrix_current, intermediary_multiply_2)
+-- Multiply by 2, 3.
+multiply_by_2_3 : process(matrix_current)
+    variable temp1, temp2 : std_logic_vector(8 downto 0);
 begin
-    for i in 15 downto 0 loop
-        intermediary_multiply_2(i) <= matrix_current(i) & '0';
-        if intermediary_multiply_2(i)(8) = '1' then -- According to the specification, if the 8th bit is high then xor with x"1b".
-            matrix_multiply_2(i) <= intermediary_multiply_2(i)(7 downto 0) xor x"1b";
-        else
-            matrix_multiply_2(i) <= intermediary_multiply_2(i)(7 downto 0);
-        end if;
-    end loop;
-end process multiply_by_2;
 
--- Multiply by 3.
-multiply_by_3 : process(matrix_current, intermediary_multiply_3, intermediary_xor)
-begin
     for i in 15 downto 0 loop
-        intermediary_multiply_3(i) <= matrix_current(i) & '0'; -- 2 * value.
-        intermediary_xor(i) <= intermediary_multiply_3(i) xor '0' & matrix_current(i); -- 3 * value = 2 * value xor value.
-        if intermediary_xor(i)(8) = '1' then -- According to the specification, if the 8th bit is high then xor with x"1b".
-            matrix_multiply_3(i) <= intermediary_xor(i)(7 downto 0) xor x"1b";
+        
+        -- 2.
+        temp1 := matrix_current(i) & '0';
+        if temp1(8) = '1' then
+             matrix_multiply_2(i) <= temp1(7 downto 0) xor x"1b";
         else
-            matrix_multiply_3(i) <= intermediary_xor(i)(7 downto 0);
+            matrix_multiply_2(i) <= temp1(7 downto 0);
         end if;
+        
+        -- 3.
+        temp2 := temp1 xor '0' & matrix_current(i); -- 3 * value = 2 * value xor value.
+        if temp2(8) = '1' then
+            matrix_multiply_3(i) <= temp2(7 downto 0) xor x"1b";
+        else
+            matrix_multiply_3(i) <= temp2(7 downto 0);
+        end if;
+
     end loop;
-end process multiply_by_3;
+
+end process multiply_by_2_3;
+
+-- Multiply by 9, 11, 13, 14.
+multiply_by_9_11_13_14 : process(matrix_current)
+    variable temp1, temp2, temp3 : std_logic_vector(8 downto 0);
+begin
+
+    for i in 15 downto 0 loop
+    
+        temp1 := matrix_current(i) & '0';
+        if temp1(8) = '1' then
+            temp1(7 downto 0) := temp1(7 downto 0) xor x"1b";
+        end if;
+
+        temp2 := temp1(7 downto 0) & '0';
+        if temp2(8) = '1' then
+            temp2(7 downto 0) := temp2(7 downto 0) xor x"1b";
+        end if;
+
+        temp3 := temp2(7 downto 0) & '0';
+        if temp3(8) = '1' then
+            temp3(7 downto 0) := temp3(7 downto 0) xor x"1b";
+        end if;
+        
+        -- 9.
+        matrix_multiply_9(i) <= matrix_current(i) xor temp3(7 downto 0);
+        
+        -- 11 (b).
+        matrix_multiply_b(i) <= matrix_current(i) xor temp1(7 downto 0) xor temp3(7 downto 0);
+        
+        -- 13 (d).
+        matrix_multiply_d(i) <= matrix_current(i) xor temp2(7 downto 0) xor temp3(7 downto 0);
+        
+        --14 (e).
+        matrix_multiply_e(i) <= temp1(7 downto 0) xor temp2(7 downto 0) xor temp3(7 downto 0);
+        
+    end loop;
+
+end process multiply_by_9_11_13_14;
 
 -- Now we "pick" our values according to the Galois field.
 pick_values : process(matrix_final, matrix_current, matrix_multiply_2, matrix_multiply_3)
@@ -106,8 +149,30 @@ begin
     
     -- Inverse operation.
     else
-    
-        -- Fill matrix_final with appropriate values.
+        
+        -- Row 0 [14 11 3 9].
+        matrix_final(0) <= matrix_multiply_e(0) xor matrix_multiply_b(1) xor matrix_multiply_d(2) xor matrix_multiply_9(3);
+        matrix_final(4) <= matrix_multiply_e(4) xor matrix_multiply_b(5) xor matrix_multiply_d(6) xor matrix_multiply_9(7);
+        matrix_final(8) <= matrix_multiply_e(8) xor matrix_multiply_b(9) xor matrix_multiply_d(10) xor matrix_multiply_9(11);
+        matrix_final(12) <= matrix_multiply_e(12) xor matrix_multiply_b(13) xor matrix_multiply_d(14) xor matrix_multiply_9(15);
+        
+        -- Row 1 [9 14 11 13].
+        matrix_final(1) <= matrix_multiply_9(0) xor matrix_multiply_e(1) xor matrix_multiply_b(2) xor matrix_multiply_d(3);
+        matrix_final(5) <= matrix_multiply_9(4) xor matrix_multiply_e(5) xor matrix_multiply_b(6) xor matrix_multiply_d(7);
+        matrix_final(9) <= matrix_multiply_9(8) xor matrix_multiply_e(9) xor matrix_multiply_b(10) xor matrix_multiply_d(11);
+        matrix_final(13) <= matrix_multiply_9(12) xor matrix_multiply_e(13) xor matrix_multiply_b(14) xor matrix_multiply_d(15);
+        
+        -- Row 2 [13 9 14 11].
+        matrix_final(2) <= matrix_multiply_d(0) xor matrix_multiply_9(1) xor matrix_multiply_e(2) xor matrix_multiply_b(3);
+        matrix_final(6) <= matrix_multiply_d(4) xor matrix_multiply_9(5) xor matrix_multiply_e(6) xor matrix_multiply_b(7);
+        matrix_final(10) <= matrix_multiply_d(8) xor matrix_multiply_9(9) xor matrix_multiply_e(10) xor matrix_multiply_b(11);
+        matrix_final(14) <= matrix_multiply_d(12) xor matrix_multiply_9(13) xor matrix_multiply_e(14) xor matrix_multiply_b(15);
+        
+        -- Row 3 [11 9 13 14].
+        matrix_final(3) <= matrix_multiply_b(0) xor matrix_multiply_d(1) xor matrix_multiply_9(2) xor matrix_multiply_e(3);
+        matrix_final(7) <= matrix_multiply_b(4) xor matrix_multiply_d(5) xor matrix_multiply_9(6) xor matrix_multiply_e(7);
+        matrix_final(11) <= matrix_multiply_b(8) xor matrix_multiply_d(9) xor matrix_multiply_9(10) xor matrix_multiply_e(11);
+        matrix_final(15) <= matrix_multiply_b(12) xor matrix_multiply_d(13) xor matrix_multiply_9(14) xor matrix_multiply_e(15);
     
     end if;
 

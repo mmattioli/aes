@@ -76,6 +76,45 @@ begin
         wait for 1 ns;
         assert (result = x"e9f74eec023020f61bf2ccf2353c21c7");
         
+        -- Inverse operation.
+        inverse <= '1';
+        
+        state <= x"bd6e7c3df2b5779e0b61216e8b10b689";
+        wait for 1 ns;
+        assert (result = x"4773b91ff72f354361cb018ea1e6cf2c");
+        
+        state <= x"fde3bad205e5d0d73547964ef1fe37f1";
+        wait for 1 ns;
+        assert (result = x"2d7e86a339d9393ee6570a1101904e16");
+        
+        state <= x"d1876c0f79c4300ab45594add66ff41f";
+        wait for 1 ns;
+        assert (result = x"39daee38f4f1a82aaf432410c36d45b9");
+        
+        state <= x"c62fe109f75eedc3cc79395d84f9cf5d";
+        wait for 1 ns;
+        assert (result = x"9a39bf1d05b20a3a476a0bf79fe51184");
+        
+        state <= x"c81677bc9b7ac93b25027992b0261996";
+        wait for 1 ns;
+        assert (result = x"18f78d779a93eef4f6742967c47f5ffd");
+        
+        state <= x"247240236966b3fa6ed2753288425b6c";
+        wait for 1 ns;
+        assert (result = x"85cf8bf472d124c10348f545329c0053");
+        
+        state <= x"fa636a2825b339c940668a3157244d17";
+        wait for 1 ns;
+        assert (result = x"fc1fc1f91934c98210fbfb8da340eb21");
+        
+        state <= x"4915598f55e5d7a0daca94fa1f0a63f7";
+        wait for 1 ns;
+        assert (result = x"076518f0b52ba2fb7a15c8d93be45e00");
+        
+        state <= x"89d810e8855ace682d1843d8cb128fe4";
+        wait for 1 ns;
+        assert (result = x"ef053f7c8b3d32fd4d2a64ad3c93071a");
+        
         finish(0);
     
     end process stimuli;
