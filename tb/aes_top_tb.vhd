@@ -61,6 +61,9 @@ begin
     stimuli : process
     begin
         
+        -- Encryption.
+        inverse <= '0';
+        
         enable <= '0';
         key <= x"2b7e151628aed2a6abf7158809cf4f3c";
         input <= x"00000000000000000000000000000000";
@@ -102,12 +105,52 @@ begin
         enable <= '0';
         assert (output = x"66e94bd4ef8a2c3b884cfa59ca342b2e");
         
---        key <= x"2b7e151628aed2a6abf7158809cf4f3c";
---        input <= x"7df76b0c1ab899b33e42f047b91b546f";
---        inverse <= '1';
---        enable <= '1';
---        wait until complete = '1';
---        assert (output = x"00000000000000000000000000000000");
+        rst <= '1';
+        wait for clock_period * 2;
+        rst <= '0';
+        
+        -- Decryption.
+        inverse <= '1';
+        
+        key <= x"2b7e151628aed2a6abf7158809cf4f3c";
+        input <= x"7df76b0c1ab899b33e42f047b91b546f";
+        enable <= '1';
+        wait until complete = '1';
+        enable <= '0';
+        assert (output = x"00000000000000000000000000000000");
+        
+        rst <= '1';
+        wait for clock_period * 2;
+        rst <= '0';
+        
+        key <= x"2b7e151628aed2a6abf7158809cf4f3c";
+        input <= x"f5d3d58503b9699de785895a96fdbaaf";
+        enable <= '1';
+        wait until complete = '1';
+        enable <= '0';
+        assert (output = x"ae2d8a571e03ac9c9eb76fac45af8e51");
+        
+        rst <= '1';
+        wait for clock_period * 2;
+        rst <= '0';
+        
+        key <= x"00000000000000000000000000000000";
+        input <= x"664dfe9e123959a00127484f77fbad63";
+        enable <= '1';
+        wait until complete = '1';
+        enable <= '0';
+        assert (output = x"f69f2445df4f9b17ad2b417be66c3710");
+        
+        rst <= '1';
+        wait for clock_period * 2;
+        rst <= '0';
+        
+        key <= x"00000000000000000000000000000000";
+        input <= x"66e94bd4ef8a2c3b884cfa59ca342b2e";
+        enable <= '1';
+        wait until complete = '1';
+        enable <= '0';
+        assert (output = x"00000000000000000000000000000000");
         
         finish(0);
     end process stimuli;

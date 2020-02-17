@@ -174,7 +174,6 @@ begin
         if rising_edge(clk) then
             if rst = '1' then
                 current_round <= 0;
-            --elsif current_state_round = get_result then
             else
                 case current_state_top is
                     when idle =>
@@ -206,7 +205,7 @@ begin
             if rst = '1' then
                 current_state_round <= pre_round;
                 finished <= '0';
-            elsif current_state_top = encrypt or current_state_top = decrypt then
+            elsif current_state_top = encrypt then
                 i := current_round;
                 case current_state_round is
                     when intermediary_wait =>
@@ -220,10 +219,10 @@ begin
                         current_state_round <= intermediary_wait;
                     when shift_rows =>
                         shift_rows_state <= sub_bytes_result;
-                        if i < rounds then
-                            next_state_round <= mix_columns;
-                        elsif (i = rounds and current_state_top = encrypt) or (i = 0 and current_state_top = decrypt) then
+                        if i = rounds then
                             next_state_round <= add_round_key;
+                        elsif i < rounds then
+                            next_state_round <= mix_columns;
                         end if;
                         current_state_round <= intermediary_wait;
                     when mix_columns =>
@@ -231,22 +230,74 @@ begin
                         next_state_round <= add_round_key;
                         current_state_round <= intermediary_wait;
                     when add_round_key =>
-                        if (i = 0 and current_state_top = encrypt) or (i = rounds and current_state_top = decrypt) then
+                        if i = 0 then
                             add_round_key_state <= input;
+                        elsif i = rounds then
+                            add_round_key_state <= shift_rows_result;
                         elsif i < rounds then
                             add_round_key_state <= mix_columns_result;
-                        elsif (i = rounds and current_state_top = encrypt) or (i = 0 and current_state_top = decrypt) then
-                            add_round_key_state <= shift_rows_result;
                         end if;
                         add_round_key_key <= round_keys(i);
                         next_state_round <= get_result;
                         current_state_round <= intermediary_wait;
                     when get_result =>
                         round_result <= add_round_key_result;
-                        if (current_round = rounds and current_state_top = encrypt) or (current_round = 0 and current_state_top = decrypt) then
+                        if current_round = rounds then
                             finished <= '1';
                         else
                             next_state_round <= sub_bytes;
+                            current_state_round <= intermediary_wait;
+                        end if;
+                    when others =>
+                end case;
+            elsif current_state_top = decrypt then
+                i := current_round;
+                case current_state_round is
+                    when intermediary_wait =>
+                        current_state_round <= next_state_round;
+                    when pre_round =>
+                        next_state_round <= add_round_key;
+                        current_state_round <= intermediary_wait;
+                    when add_round_key =>
+                        if i = rounds then
+                            add_round_key_state <= input;
+                            next_state_round <= shift_rows;
+                        elsif i = 0 then
+                            add_round_key_state <= sub_bytes_result;
+                            next_state_round <= get_result;
+                        elsif i < rounds then
+                            add_round_key_state <= round_result;
+                            next_state_round <= mix_columns;
+                        end if;
+                        add_round_key_key <= round_keys(i);
+                        current_state_round <= intermediary_wait;
+                    when mix_columns =>
+                        mix_columns_state <= add_round_key_result;
+                        next_state_round <= shift_rows;
+                        current_state_round <= intermediary_wait;
+                    when shift_rows =>
+                        if i = rounds then
+                            shift_rows_state <= add_round_key_result;
+                        elsif i < rounds then
+                            shift_rows_state <= mix_columns_result;
+                        end if;
+                        next_state_round <= sub_bytes;
+                        current_state_round <= intermediary_wait;
+                    when sub_bytes =>
+                        sub_bytes_state <= shift_rows_result;
+                        if i = 0 then
+                            next_state_round <= add_round_key;
+                        elsif i <= rounds then
+                            next_state_round <= get_result;
+                        end if;
+                        current_state_round <= intermediary_wait;                  
+                    when get_result =>
+                        if current_round = 0 then
+                            round_result <= add_round_key_result;
+                            finished <= '1';
+                        else
+                            round_result <= sub_bytes_result;
+                            next_state_round <= add_round_key;
                             current_state_round <= intermediary_wait;
                         end if;
                     when others =>
